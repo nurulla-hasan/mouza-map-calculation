@@ -567,14 +567,7 @@ const MapCalculator = () => {
             )}
           </div>
 
-          {scale && !results && (
-            <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-3 mb-4 text-sm" role="alert">
-              <div className="flex items-center justify-between gap-3">
-                <p><span className="font-bold">Scale Set:</span> 1 ft ≈ {scale.toFixed(DECIMALS)} px. Ready to draw a plot.</p>
-                <button onClick={() => { setMode('calibrating'); setCalibrationLine([]); setIsDrawing(false); }} className="px-3 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700">Re-calibrate</button>
-              </div>
-            </div>
-          )}
+          {/* Removed redundant Re-calibrate alert; scale info is shown in the badge below and 'Change' handles re-calibration */}
 
           {/* Scale badge above canvas */}
           {scale && (
@@ -731,7 +724,7 @@ const MapCalculator = () => {
               scaleY={stageScale}
               x={stagePos.x}
               y={stagePos.y}
-              draggable={(mode === 'none' && !isPinching) || isPlotFinished}
+              draggable={(mode === 'none' || isPlotFinished) && !isPinching}
               onDragEnd={(e) => setStagePos(e.target.position())}
             >
               <Layer>
