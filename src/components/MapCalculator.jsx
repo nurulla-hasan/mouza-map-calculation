@@ -416,6 +416,10 @@ const MapCalculator = () => {
 
   // Save / Load handlers
   const handleSaveJSON = () => {
+    if(!isPlotFinished || !results){
+      alert('Please calculate the area before saving.');
+      return;
+    }
     try {
       const data = { scale, plotPoints };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -512,7 +516,7 @@ const MapCalculator = () => {
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
                     onClick={handleSaveJSON}
-                    disabled={!isPlotFinished || !results}
+                    // disabled={!isPlotFinished || !results}
                     title={!isPlotFinished || !results ? 'Finish & Calculate the plot first' : undefined}
                     className="px-4 py-2 rounded-md font-semibold text-white bg-slate-700 hover:bg-slate-800 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
                   >
