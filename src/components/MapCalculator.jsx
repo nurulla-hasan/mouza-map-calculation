@@ -2,6 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Stage, Layer, Image, Line, Circle } from 'react-konva';
 import * as pdfjs from 'pdfjs-dist';
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
 // Setup PDF.js worker (Vite-friendly)
 // Use the ESM worker path. Vite will resolve this URL at build time.
@@ -66,20 +72,20 @@ const Modal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 print:hidden">
       <div className="bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
-        <h3 className="text-lg font-semibold mb-4">Enter Real Distance</h3>
-        <input
+        <h3 className="text-lg font-semibold mb-4">প্রকৃত দূরত্ব লিখুন</h3>
+        <Input
           type="number"
           value={distance}
           onChange={(e) => setDistance(e.target.value)}
           placeholder="e.g., 330 (in feet)"
-          className="w-full p-2 border border-gray-300 rounded-md mb-2"
+          className="w-full mb-2"
           min="0"
           step="any"
         />
         {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
         <div className="flex justify-end gap-4">
-          <button onClick={handleClose} className="px-4 py-2 rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200">Cancel</button>
-          <button onClick={handleSubmit} className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700">Submit</button>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleSubmit}>Submit</Button>
         </div>
       </div>
     </div>
@@ -92,28 +98,42 @@ const ResultsDisplay = ({ results, onPrint }) => {
   return (
     <div className="mt-6 bg-gray-50 p-4 rounded-lg border">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-gray-800">Calculation Results</h3>
-        <button onClick={onPrint} className="px-4 py-2 rounded-md font-semibold text-white bg-gray-700 hover:bg-gray-800 print:hidden">Print Report</button>
+        <h3 className="text-xl font-bold text-gray-800">হিসাবের ফলাফল</h3>
+        <Button onClick={onPrint} className="print:hidden">রিপোর্ট প্রিন্ট করুন</Button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-        <div className="bg-white p-4 rounded-lg shadow-sm">
-          <p className="text-sm text-gray-500">Area (শতক)</p>
-          <p className="text-2xl font-bold text-green-600">{results.shotok.toFixed(DECIMALS)}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm">
-          <p className="text-sm text-gray-500">Area (কাঠা)</p>
-          <p className="text-2xl font-bold text-blue-600">{results.katha.toFixed(DECIMALS)}</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm">
-          <p className="text-sm text-gray-500">Area (বর্গফুট)</p>
-          <p className="text-2xl font-bold text-purple-600">{results.sqft.toFixed(DECIMALS)}</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-500">আয়তন (শতকে)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">{results.shotok.toFixed(DECIMALS)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-500">আয়তন (কাঠায়)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-blue-600">{results.katha.toFixed(DECIMALS)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-gray-500">আয়তন (বর্গফুটে)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-purple-600">{results.sqft.toFixed(DECIMALS)}</p>
+          </CardContent>
+        </Card>
       </div>
       <div className="mt-4">
-        <h4 className="font-semibold mb-2">Side Lengths (in feet):</h4>
-        <div className="bg-white p-3 rounded-md">
-          <SideLengthsList lengths={results.lengths} />
-        </div>
+        <Label className="font-semibold mb-2 block">বাহুর দৈর্ঘ্য (ফুটে):</Label>
+        <Card>
+          <CardContent className="p-3">
+            <SideLengthsList lengths={results.lengths} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -121,19 +141,28 @@ const ResultsDisplay = ({ results, onPrint }) => {
 
 const ReportTable = ({ results }) => {
   return (
-    <table className="w-full text-left border-collapse">
-      <thead>
-        <tr className="bg-gray-100">
-          <th className="p-2 border">Unit</th>
-          <th className="p-2 border">Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td className="p-2 border">শতক</td><td className="p-2 border">{results.shotok.toFixed(DECIMALS)}</td></tr>
-        <tr><td className="p-2 border">কাঠা</td><td className="p-2 border">{results.katha.toFixed(DECIMALS)}</td></tr>
-        <tr><td className="p-2 border">বর্গফুট</td><td className="p-2 border">{results.sqft.toFixed(DECIMALS)}</td></tr>
-      </tbody>
-    </table>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Unit</TableHead>
+          <TableHead>Value</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow>
+          <TableCell>শতক</TableCell>
+          <TableCell>{results.shotok.toFixed(DECIMALS)}</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell>কাঠা</TableCell>
+          <TableCell>{results.katha.toFixed(DECIMALS)}</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell>বর্গফুট</TableCell>
+          <TableCell>{results.sqft.toFixed(DECIMALS)}</TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   );
 };
 
@@ -143,11 +172,11 @@ const SideLengthsList = ({ lengths, decimals = DECIMALS, showPerimeter = true })
     <>
       <ul className="list-disc list-inside">
         {lengths.slice(0, -1).map((len, i) => (
-          <li key={i}>Side {i + 1}: {len.toFixed(decimals)} ft</li>
+          <li key={i}>বাহু {i + 1}: {len.toFixed(decimals)} ft</li>
         ))}
       </ul>
       {showPerimeter && (
-        <p className="mt-2 font-semibold">Perimeter: {perimeter.toFixed(decimals)} ft</p>
+        <p className="mt-2 font-semibold">পরিসীমা: {perimeter.toFixed(decimals)} ft</p>
       )}
     </>
   );
@@ -221,6 +250,7 @@ const MapCalculator = () => {
   const [snapHint, setSnapHint] = useState(false);
   const loadInputRef = useRef(null);
   const [imageName, setImageName] = useState('');
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -239,6 +269,13 @@ const MapCalculator = () => {
       setResults(newResults);
     }
   }, [plotPoints, scale, isPlotFinished]);
+
+  // Auto-scroll to results when available
+  useEffect(() => {
+    if (results && resultsRef.current) {
+      resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [results]);
 
   const resetState = (fullReset = true) => {
     if (fullReset) setImage(null);
@@ -276,7 +313,7 @@ const MapCalculator = () => {
           img.onload = () => { resetState(true); setImage(img); };
         } catch (error) {
           console.error("Error processing PDF:", error);
-          alert("Failed to load PDF file. It might be corrupted or invalid.");
+          toast.error('PDF লোড করা যায়নি (ফাইলটি ক্ষতিগ্রস্ত বা অবৈধ হতে পারে)');
         }
       };
       reader.readAsArrayBuffer(file);
@@ -371,7 +408,7 @@ const MapCalculator = () => {
 
   const _handleModalSubmit = (realDistance) => {
     if (!Number.isFinite(realDistance) || realDistance <= 0) {
-      alert('Please enter a distance greater than 0');
+      toast.error('দয়া করে ০ এর চেয়ে বড় দূরত্ব দিন');
       return;
     }
     const [x1, y1, x2, y2] = calibrationLine;
@@ -380,6 +417,7 @@ const MapCalculator = () => {
     setScale(newScale);
     setIsModalOpen(false);
     setCalibrationLine([]);
+    toast.success('স্কেল সেট হয়েছে');
   };
 
   const handlePointDragEnd = (e, index) => {
@@ -425,8 +463,8 @@ const MapCalculator = () => {
 
   // Save / Load handlers
   const handleSaveJSON = () => {
-    if(!isPlotFinished || !results){
-      alert('Please calculate the area before saving.');
+    if (!isPlotFinished || !results) {
+      toast.warning('সেভ করতে হলে আগে হিসাব সম্পন্ন করুন');
       return;
     }
     try {
@@ -440,15 +478,16 @@ const MapCalculator = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success('JSON সংরক্ষিত হয়েছে');
     } catch (err) {
       console.error('Save failed', err);
-      alert('Failed to save data');
+      toast.error('ডাটা সংরক্ষণ ব্যর্থ হয়েছে');
     }
   };
 
   const handleLoadClick = () => {
     if (!image) {
-      alert('Please upload a map before loading JSON.');
+      toast.warning('JSON লোড করার আগে ম্যাপ আপলোড করুন');
       return;
     }
     if (loadInputRef.current) loadInputRef.current.click();
@@ -456,7 +495,7 @@ const MapCalculator = () => {
 
   const handleLoadChange = (e) => {
     if (!image) {
-      alert('Please upload a map before loading JSON.');
+      toast.warning('JSON লোড করার আগে ম্যাপ আপলোড করুন');
       if (e?.target) e.target.value = '';
       return;
     }
@@ -476,9 +515,10 @@ const MapCalculator = () => {
         setMode('drawing_plot');
         setCalibrationLine([]);
         setSnapHint(false);
+        toast.success('JSON লোড হয়েছে');
       } catch (err) {
         console.error('Load failed', err);
-        alert('Failed to load data: ' + err.message);
+        toast.error('ডাটা লোড ব্যর্থ: ' + err.message);
       } finally {
         e.target.value = '';
       }
@@ -515,46 +555,40 @@ const MapCalculator = () => {
       <Modal isOpen={isModalOpen} onClose={() => { setCalibrationLine([]); setIsDrawing(false); setIsModalOpen(false); }} onSubmit={_handleModalSubmit} />
       <div className="p-4 md:p-8 print:hidden">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Mouza Map Calculator</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">মৌজা ম্যাপ ক্যালকুলেটর</h1>
 
           <div className="bg-gray-50 border rounded-lg p-4 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">1. Upload Map</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">1. ম্যাপ আপলোড করুন</label>
                 <input type="file" onChange={handleImageUpload} accept=".pdf,.png,.jpg,.jpeg" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
                 {/* Save / Load JSON controls */}
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    onClick={handleSaveJSON}
-                    // disabled={!isPlotFinished || !results}
-                    title={!isPlotFinished || !results ? 'Finish & Calculate the plot first' : undefined}
-                    className="px-4 py-2 rounded-md font-semibold text-white bg-slate-700 hover:bg-slate-800 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    Save JSON
-                  </button>
-                  <button
-                    onClick={handleLoadClick}
-                    // disabled={!image}
-                    title={!image ? 'Upload a map first' : undefined}
-                    className="px-4 py-2 rounded-md font-semibold text-white bg-slate-500 hover:bg-slate-600 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    Load JSON
-                  </button>
+                  <Button onClick={handleSaveJSON} title={!isPlotFinished || !results ? 'Finish & Calculate the plot first' : undefined}>
+                    JSON সংরক্ষণ করুন
+                  </Button>
+                  <Button onClick={handleLoadClick} variant="outline" title={!image ? 'Upload a map first' : undefined}>
+                    JSON লোড করুন
+                  </Button>
                   <input ref={loadInputRef} type="file" accept="application/json" className="hidden" onChange={handleLoadChange} />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">2. Set Scale</label>
-                <button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); lastCalibClickRef.current = 0; }} disabled={!image || mode === 'calibrating'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">{mode === 'calibrating' ? 'Drawing scale... (drag or 2 clicks)' : 'Set Scale'}</button>
+                <label className="block text-sm font-medium text-gray-700 mb-1">2. স্কেল সেট করুন</label>
+                <Button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); lastCalibClickRef.current = 0; }} disabled={!image || mode === 'calibrating'} className="w-full">
+                  {mode === 'calibrating' ? 'স্কেল আঁকা হচ্ছে... (টেনে আনুন বা ২ বার ক্লিক করুন)' : 'স্কেল সেট করুন'}
+                </Button>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">3. Draw Plot</label>
-                <button onClick={() => { setMode('drawing_plot'); clearPlot(); }} disabled={!scale || mode === 'drawing_plot'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400">{mode === 'drawing_plot' ? 'Click corners on map...' : 'Draw Plot'}</button>
+                <label className="block text-sm font-medium text-gray-700 mb-1">3. প্লট আঁকুন</label>
+                <Button onClick={() => { setMode('drawing_plot'); clearPlot(); }} disabled={!scale || mode === 'drawing_plot'} className="w-full">
+                  {mode === 'drawing_plot' ? 'ম্যাপে কোণে ক্লিক করুন' : 'প্লট আঁকুন'}
+                </Button>
               </div>
             </div>
             {mode === 'calibrating' && (
               <div className="flex gap-4 mt-4">
-                <button
+                <Button
                   onClick={() => {
                     if (calibrationLine.length >= 4) {
                       setIsDrawing(false);
@@ -563,11 +597,11 @@ const MapCalculator = () => {
                     }
                   }}
                   disabled={calibrationLine.length < 4}
-                  className="flex-grow px-4 py-2 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+                  className="flex-grow"
                 >
-                  Confirm Scale
-                </button>
-                <button
+                  স্কেল নিশ্চিত করুন
+                </Button>
+                <Button
                   onClick={() => {
                     if (calibrationLine.length >= 4) {
                       // keep start point and allow re-drag
@@ -576,23 +610,23 @@ const MapCalculator = () => {
                     }
                   }}
                   disabled={calibrationLine.length < 4}
-                  className="px-4 py-2 rounded-md font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400"
+                  variant="secondary"
                 >
-                  Undo
-                </button>
-                <button
+                  পূর্বাবস্থায় ফেরান
+                </Button>
+                <Button
                   onClick={() => { setCalibrationLine([]); setIsDrawing(false); setMode('none'); }}
-                  className="px-4 py-2 rounded-md font-semibold text-white bg-red-500 hover:bg-red-600"
+                  variant="destructive"
                 >
-                  Cancel
-                </button>
+                  বাতিল
+                </Button>
               </div>
             )}
             {mode === 'drawing_plot' && (
               <div className="flex gap-4 mt-4">
-                <button onClick={finishPlot} disabled={plotPoints.length < 3} className="flex-grow px-4 py-2 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400">Finish & Calculate</button>
-                <button onClick={() => setPlotPoints(p => p.slice(0, -1))} disabled={plotPoints.length === 0} className="px-4 py-2 rounded-md font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400">Undo</button>
-                <button onClick={clearPlot} disabled={plotPoints.length === 0} className="px-4 py-2 rounded-md font-semibold text-white bg-red-500 hover:bg-red-600 disabled:bg-gray-400">Clear</button>
+                <Button onClick={finishPlot} disabled={plotPoints.length < 3} className="flex-grow">শেষ করুন ও হিসাব করুন</Button>
+                <Button onClick={() => setPlotPoints(p => p.slice(0, -1))} disabled={plotPoints.length === 0} variant="secondary">পূর্বাবস্থায় ফেরান</Button>
+                <Button onClick={clearPlot} disabled={plotPoints.length === 0} variant="destructive">সাফ করুন</Button>
               </div>
             )}
           </div>
@@ -603,7 +637,7 @@ const MapCalculator = () => {
           {scale && (
             <div className="mb-2 flex items-center gap-2 text-xs">
               <span className="inline-block px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">1 ft ≈ {scale.toFixed(DECIMALS)} px</span>
-              <button onClick={() => { setMode('calibrating'); setCalibrationLine([]); setIsDrawing(false); }} className="text-emerald-700 underline">Change</button>
+              <Button variant="link" size="sm" onClick={() => { setMode('calibrating'); setCalibrationLine([]); setIsDrawing(false); }}>Change</Button>
             </div>
           )}
 
@@ -802,7 +836,9 @@ const MapCalculator = () => {
             </Stage>
           </div>
 
-          <ResultsDisplay results={results} onPrint={handlePrint} />
+          <div ref={resultsRef}>
+            <ResultsDisplay results={results} onPrint={handlePrint} />
+          </div>
         </div>
       </div>
       <PrintLayout ref={printRef} results={results} reportImage={reportImage} imageName={imageName} />

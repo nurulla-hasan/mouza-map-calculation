@@ -1,13 +1,12 @@
+import React from 'react'
+import MapCalculator from './components/MapCalculator'
+import { Toaster } from 'sonner'
 
-import React from 'react';
-import MapCalculator from './components/MapCalculator';
-
-function App() {
+export default function App() {
   return (
-    <div>
+    <>
+      <Toaster richColors position="top-center" />
       <MapCalculator />
-    </div>
-  );
+    </>
+  )
 }
-
-export default App;
