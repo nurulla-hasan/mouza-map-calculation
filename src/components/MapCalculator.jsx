@@ -63,7 +63,7 @@ const Modal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 print:hidden">
+    <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 print:hidden">
       <div className="bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
         <h3 className="text-lg font-semibold mb-4">Enter Real Distance</h3>
         <input 
