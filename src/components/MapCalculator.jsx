@@ -348,6 +348,26 @@ const MapCalculator = () => {
 
   const flatPlotPoints = plotPoints.flatMap(p => [p.x, p.y]);
 
+  // Mobile-friendly zoom controls
+  const zoomAtCenter = (factor) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const oldScale = stageScale;
+    const newScale = Math.max(0.1, Math.min(10, oldScale * factor));
+    const pointer = { x: stageSize.width / 2, y: stageSize.height / 2 };
+    const mousePointTo = {
+      x: (pointer.x - stagePos.x) / oldScale,
+      y: (pointer.y - stagePos.y) / oldScale,
+    };
+    setStageScale(newScale);
+    setStagePos({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+  };
+
+  const resetView = () => {
+    setStageScale(1);
+    setStagePos({ x: 0, y: 0 });
+  };
+
   return (
     <>
       <Modal isOpen={isModalOpen} onClose={() => { setCalibrationLine([]); setIsDrawing(false); setIsModalOpen(false); }} onSubmit={_handleModalSubmit} />
@@ -384,8 +404,14 @@ const MapCalculator = () => {
               <p><span className="font-bold">Scale Set:</span> 1 foot ≈ {scale.toFixed(2)} pixels. Ready to draw a plot.</p>
             </div>
           )}
+          {/* Zoom Controls for Mobile */}
+          <div className="flex gap-2 justify-end mb-3">
+            <button onClick={() => zoomAtCenter(1.2)} className="px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">Zoom In</button>
+            <button onClick={() => zoomAtCenter(1/1.2)} className="px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">Zoom Out</button>
+            <button onClick={resetView} className="px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">Reset View</button>
+          </div>
           
-          <div className={`border border-gray-300 rounded-lg shadow-sm overflow-hidden ${mode !== 'none' ? 'cursor-crosshair' : 'cursor-grab'}`} ref={containerRef}>
+          <div className={`border border-gray-300 rounded-lg shadow-sm overflow-hidden ${mode !== 'none' ? 'cursor-crosshair' : 'cursor-grab'} touch-none select-none`} ref={containerRef}>
             <Stage 
               ref={stageRef}
               width={stageSize.width} 
@@ -393,6 +419,22 @@ const MapCalculator = () => {
               onMouseDown={handleStageMouseDown}
               onWheel={handleWheel}
               onMouseMove={(e) => {
+                if (mode === 'calibrating' && isDrawing) {
+                  const stage = e.target.getStage();
+                  const pos = getPointerPos(stage);
+                  setCalibrationLine((prev) => {
+                    if (prev.length >= 2) return [prev[0], prev[1], pos.x, pos.y];
+                    return prev;
+                  });
+                }
+              }}
+              onTouchStart={(e) => {
+                // prevent page scroll/zoom
+                e.evt.preventDefault();
+                handleStageMouseDown(e);
+              }}
+              onTouchMove={(e) => {
+                e.evt.preventDefault();
                 if (mode === 'calibrating' && isDrawing) {
                   const stage = e.target.getStage();
                   const pos = getPointerPos(stage);
@@ -413,7 +455,20 @@ const MapCalculator = () => {
                 {image && <Image image={image} />}
                 {calibrationLine.length > 0 && <Line points={calibrationLine} stroke="#E53E3E" strokeWidth={3 / stageScale} dash={[10 / stageScale, 5 / stageScale]} />}
                 {plotPoints.length > 0 && <Line points={[...flatPlotPoints, ... (isPlotFinished ? [plotPoints[0].x, plotPoints[0].y] : [])]} stroke="#3182CE" strokeWidth={3 / stageScale} closed={isPlotFinished} />}
-                {plotPoints.map((point, i) => <Circle key={i} x={point.x} y={point.y} radius={6 / stageScale} fill="#3182CE" stroke="white" strokeWidth={2 / stageScale} draggable={isPlotFinished} onDragEnd={(e) => handlePointDragEnd(e, i)} />)}
+                {plotPoints.map((point, i) => (
+                  <Circle
+                    key={i}
+                    x={point.x}
+                    y={point.y}
+                    radius={6 / stageScale}
+                    fill="#3182CE"
+                    stroke="white"
+                    strokeWidth={2 / stageScale}
+                    hitStrokeWidth={20 / stageScale}
+                    draggable={isPlotFinished}
+                    onDragEnd={(e) => handlePointDragEnd(e, i)}
+                  />
+                ))}
               </Layer>
             </Stage>
           </div>
