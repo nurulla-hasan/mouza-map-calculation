@@ -111,7 +111,7 @@ const ResultsDisplay = ({ results, onPrint }) => {
       <div className="mt-4">
         <h4 className="font-semibold mb-2">Side Lengths (in feet):</h4>
         <ul className="list-disc list-inside bg-white p-3 rounded-md">
-          {results.lengths.map((len, i) => (
+          {results.lengths.slice(0, -1).map((len, i) => (
             <li key={i} className="text-gray-700">Side {i + 1}: {len.toFixed(2)} ft</li>
           ))}
         </ul>
@@ -144,7 +144,7 @@ const PrintLayout = React.forwardRef(({ results, reportImage }, ref) => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Side Lengths</h2>
         <ul className="list-disc list-inside">
-          {results.lengths.map((len, i) => (
+          {results.lengths.slice(0, -1).map((len, i) => (
             <li key={i}>Side {i + 1}: {len.toFixed(2)} ft</li>
           ))}
         </ul>
@@ -194,6 +194,7 @@ const MapCalculator = () => {
   const [results, setResults] = useState(null);
   const [isPlotFinished, setIsPlotFinished] = useState(false);
   const [reportImage, setReportImage] = useState(null);
+  const [snapHint, setSnapHint] = useState(false);
 
   useEffect(() => {
     const updateSize = () => {
@@ -270,7 +271,7 @@ const MapCalculator = () => {
   // Reusable logic to add/select based on a stage-space position
   const addPointerByPos = (pos) => {
     if (mode === 'none') return;
-    const SNAP_THRESHOLD = 2; // pixels in stage-space
+    const SNAP_THRESHOLD = 5; // pixels in stage-space
     if (mode === 'calibrating') {
       const now = Date.now();
       if (now - lastCalibClickRef.current < 250) return;
@@ -301,6 +302,8 @@ const MapCalculator = () => {
             y = first.y;
           }
         }
+        // hide snap hint after placing
+        setSnapHint(false);
         return [...prev, { x, y }];
       });
     }
@@ -353,7 +356,7 @@ const MapCalculator = () => {
   };
 
   const handlePointDragEnd = (e, index) => {
-    const SNAP_THRESHOLD = 10;
+    const SNAP_THRESHOLD = 5;
     const newPoints = [...plotPoints];
     let x = e.target.x();
     let y = e.target.y();
@@ -367,6 +370,7 @@ const MapCalculator = () => {
     }
     newPoints[index] = { x, y };
     setPlotPoints(newPoints);
+    setSnapHint(false);
   };
 
   const finishPlot = () => {
@@ -503,6 +507,13 @@ const MapCalculator = () => {
                     if (prev.length >= 2) return [prev[0], prev[1], pos.x, pos.y];
                     return prev;
                   });
+                } else if (mode === 'drawing_plot' && !isPlotFinished && plotPoints.length > 0) {
+                  const stage = e.target.getStage();
+                  const pos = getPointerPos(stage);
+                  const first = plotPoints[0];
+                  const SNAP_VISUAL_THRESHOLD = 5; // stage-space pixels
+                  const near = Math.hypot(pos.x - first.x, pos.y - first.y) <= SNAP_VISUAL_THRESHOLD;
+                  if (near !== snapHint) setSnapHint(near);
                 }
               }}
               onTouchStart={(e) => {
@@ -573,6 +584,13 @@ const MapCalculator = () => {
                     const dy = t.clientY - touchSessionRef.current.startClient.y;
                     if (Math.hypot(dx, dy) > 6) touchSessionRef.current.moved = true;
                   }
+                } else if (mode === 'drawing_plot' && !isPlotFinished && plotPoints.length > 0 && touches && touches.length === 1) {
+                  const stage = e.target.getStage();
+                  const pos = getPointerPos(stage);
+                  const first = plotPoints[0];
+                  const SNAP_VISUAL_THRESHOLD = 5; // stage-space pixels
+                  const near = Math.hypot(pos.x - first.x, pos.y - first.y) <= SNAP_VISUAL_THRESHOLD;
+                  if (near !== snapHint) setSnapHint(near);
                 }
               }}
               onTouchEnd={(e) => {
@@ -614,6 +632,7 @@ const MapCalculator = () => {
                     }
                   }
                   touchSessionRef.current.active = false;
+                  setSnapHint(false);
                 }
               }}
               scaleX={stageScale}
@@ -635,6 +654,19 @@ const MapCalculator = () => {
                       <Circle x={calibrationLine[2]} y={calibrationLine[3]} radius={8 / stageScale} fill="#E53E3E" shadowColor="#000" shadowBlur={8 / stageScale} shadowOpacity={0.25} stroke="white" strokeWidth={2 / stageScale} />
                     )}
                   </>
+                )}
+                {mode === 'drawing_plot' && !isPlotFinished && plotPoints.length > 0 && snapHint && (
+                  <Circle
+                    x={plotPoints[0].x}
+                    y={plotPoints[0].y}
+                    radius={12 / stageScale}
+                    stroke="#22c55e"
+                    strokeWidth={3 / stageScale}
+                    dash={[6 / stageScale, 4 / stageScale]}
+                    shadowColor="#22c55e"
+                    shadowBlur={10 / stageScale}
+                    shadowOpacity={0.6}
+                  />
                 )}
                 {plotPoints.length > 0 && <Line points={[...flatPlotPoints, ... (isPlotFinished ? [plotPoints[0].x, plotPoints[0].y] : [])]} stroke="#3182CE" strokeWidth={3 / stageScale} closed={isPlotFinished} />}
                 {plotPoints.map((point, i) => (
