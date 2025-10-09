@@ -67,11 +67,11 @@ const Modal = ({ isOpen, onClose, onSubmit }) => {
     <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50 print:hidden">
       <div className="bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
         <h3 className="text-lg font-semibold mb-4">Enter Real Distance</h3>
-        <input 
-          type="number" 
-          value={distance} 
-          onChange={(e) => setDistance(e.target.value)} 
-          placeholder="e.g., 330 (in feet)" 
+        <input
+          type="number"
+          value={distance}
+          onChange={(e) => setDistance(e.target.value)}
+          placeholder="e.g., 330 (in feet)"
           className="w-full p-2 border border-gray-300 rounded-md mb-2"
           min="0"
           step="any"
@@ -200,7 +200,7 @@ const MapCalculator = () => {
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [stageScale, setStageScale] = useState(1);
   const [isPinching, setIsPinching] = useState(false);
-  
+
   // Scale State
   const [scale, setScale] = useState(null);
   const [calibrationLine, setCalibrationLine] = useState([]);
@@ -233,7 +233,7 @@ const MapCalculator = () => {
   }, [plotPoints, scale, isPlotFinished]);
 
   const resetState = (fullReset = true) => {
-    if(fullReset) setImage(null);
+    if (fullReset) setImage(null);
     setScale(null);
     setCalibrationLine([]);
     setPlotPoints([]);
@@ -402,7 +402,7 @@ const MapCalculator = () => {
       }
     }, 100); // Timeout to allow canvas to re-render before capture
   };
-  
+
   const clearPlot = () => {
     setPlotPoints([]);
     setResults(null);
@@ -434,10 +434,19 @@ const MapCalculator = () => {
   };
 
   const handleLoadClick = () => {
+    if (!image) {
+      alert('Please upload a map before loading JSON.');
+      return;
+    }
     if (loadInputRef.current) loadInputRef.current.click();
   };
 
   const handleLoadChange = (e) => {
+    if (!image) {
+      alert('Please upload a map before loading JSON.');
+      if (e?.target) e.target.value = '';
+      return;
+    }
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -493,26 +502,33 @@ const MapCalculator = () => {
       <div className="p-4 md:p-8 print:hidden">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Mouza Map Calculator</h1>
-          
+
           <div className="bg-gray-50 border rounded-lg p-4 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
-               <div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">1. Upload Map</label>
                 <input type="file" onChange={handleImageUpload} accept=".pdf,.png,.jpg,.jpeg" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
                 {/* Save / Load JSON controls */}
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                onClick={handleSaveJSON}
-                disabled={!isPlotFinished || !results}
-                title={!isPlotFinished || !results ? 'Finish & Calculate the plot first' : undefined}
-                className="px-4 py-2 rounded-md font-semibold text-white bg-slate-700 hover:bg-slate-800 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                Save JSON
-              </button>
-              <button onClick={handleLoadClick} className="px-4 py-2 rounded-md font-semibold text-white bg-slate-500 hover:bg-slate-600">Load JSON</button>
-              <input ref={loadInputRef} type="file" accept="application/json" className="hidden" onChange={handleLoadChange} />
-            </div>
-          </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    onClick={handleSaveJSON}
+                    disabled={!isPlotFinished || !results}
+                    title={!isPlotFinished || !results ? 'Finish & Calculate the plot first' : undefined}
+                    className="px-4 py-2 rounded-md font-semibold text-white bg-slate-700 hover:bg-slate-800 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Save JSON
+                  </button>
+                  <button
+                    onClick={handleLoadClick}
+                    // disabled={!image}
+                    title={!image ? 'Upload a map first' : undefined}
+                    className="px-4 py-2 rounded-md font-semibold text-white bg-slate-500 hover:bg-slate-600 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Load JSON
+                  </button>
+                  <input ref={loadInputRef} type="file" accept="application/json" className="hidden" onChange={handleLoadChange} />
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">2. Set Scale</label>
                 <button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); lastCalibClickRef.current = 0; }} disabled={!image || mode === 'calibrating'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">{mode === 'calibrating' ? 'Drawing scale... (drag or 2 clicks)' : 'Set Scale'}</button>
@@ -531,7 +547,7 @@ const MapCalculator = () => {
                       setMode('none');
                       setIsModalOpen(true);
                     }
-                  }} 
+                  }}
                   disabled={calibrationLine.length < 4}
                   className="flex-grow px-4 py-2 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
                 >
@@ -576,12 +592,12 @@ const MapCalculator = () => {
               <button onClick={() => { setMode('calibrating'); setCalibrationLine([]); setIsDrawing(false); }} className="text-emerald-700 underline">Change</button>
             </div>
           )}
-          
+
           <div className={`border border-gray-300 rounded-lg shadow-sm overflow-hidden ${mode !== 'none' ? 'cursor-crosshair' : 'cursor-grab'} touch-none select-none`} ref={containerRef}>
-            <Stage 
+            <Stage
               ref={stageRef}
-              width={stageSize.width} 
-              height={stageSize.height} 
+              width={stageSize.width}
+              height={stageSize.height}
               onMouseDown={handleStageMouseDown}
               onWheel={handleWheel}
               onMouseMove={(e) => {
