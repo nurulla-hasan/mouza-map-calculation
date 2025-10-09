@@ -10,6 +10,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.m
 // --- Helper Functions & Constants ---
 const SHOTOK_SQ_FT = 435.6;
 const KATHA_SQ_FT = 720;
+const DECIMALS = 2; // global decimal precision for display
 
 const calculatePolygonData = (points, scale) => {
   if (points.length < 3 || !scale) return null;
@@ -97,29 +98,62 @@ const ResultsDisplay = ({ results, onPrint }) => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <p className="text-sm text-gray-500">Area (শতক)</p>
-          <p className="text-2xl font-bold text-green-600">{results.shotok.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-green-600">{results.shotok.toFixed(DECIMALS)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <p className="text-sm text-gray-500">Area (কাঠা)</p>
-          <p className="text-2xl font-bold text-blue-600">{results.katha.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-blue-600">{results.katha.toFixed(DECIMALS)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <p className="text-sm text-gray-500">Area (বর্গফুট)</p>
-          <p className="text-2xl font-bold text-purple-600">{results.sqft.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-purple-600">{results.sqft.toFixed(DECIMALS)}</p>
         </div>
       </div>
       <div className="mt-4">
         <h4 className="font-semibold mb-2">Side Lengths (in feet):</h4>
-        <ul className="list-disc list-inside bg-white p-3 rounded-md">
-          {results.lengths.slice(0, -1).map((len, i) => (
-            <li key={i} className="text-gray-700">Side {i + 1}: {len.toFixed(2)} ft</li>
-          ))}
-        </ul>
+        <div className="bg-white p-3 rounded-md">
+          <SideLengthsList lengths={results.lengths} />
+        </div>
       </div>
     </div>
   );
 };
 
+const ReportTable = ({ results }) => {
+  return (
+    <table className="w-full text-left border-collapse">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="p-2 border">Unit</th>
+          <th className="p-2 border">Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td className="p-2 border">শতক</td><td className="p-2 border">{results.shotok.toFixed(DECIMALS)}</td></tr>
+        <tr><td className="p-2 border">কাঠা</td><td className="p-2 border">{results.katha.toFixed(DECIMALS)}</td></tr>
+        <tr><td className="p-2 border">বর্গফুট</td><td className="p-2 border">{results.sqft.toFixed(DECIMALS)}</td></tr>
+      </tbody>
+    </table>
+  );
+};
+
+const SideLengthsList = ({ lengths, decimals = DECIMALS, showPerimeter = true }) => {
+  const perimeter = lengths.slice(0, -1).reduce((a, b) => a + b, 0);
+  return (
+    <>
+      <ul className="list-disc list-inside">
+        {lengths.slice(0, -1).map((len, i) => (
+          <li key={i}>Side {i + 1}: {len.toFixed(decimals)} ft</li>
+        ))}
+      </ul>
+      {showPerimeter && (
+        <p className="mt-2 font-semibold">Perimeter: {perimeter.toFixed(decimals)} ft</p>
+      )}
+    </>
+  );
+};
+
+// Print-only layout for the report page
 const PrintLayout = React.forwardRef(({ results, reportImage }, ref) => {
   if (!results || !reportImage) return null;
   return (
@@ -127,27 +161,11 @@ const PrintLayout = React.forwardRef(({ results, reportImage }, ref) => {
       <h1 className="text-2xl font-bold mb-4 border-b pb-2">Mouza Map Calculation Report</h1>
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Calculated Area</h2>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border">Unit</th>
-              <th className="p-2 border">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td className="p-2 border">শতক</td><td className="p-2 border">{results.shotok.toFixed(2)}</td></tr>
-            <tr><td className="p-2 border">কাঠা</td><td className="p-2 border">{results.katha.toFixed(2)}</td></tr>
-            <tr><td className="p-2 border">বর্গফুট</td><td className="p-2 border">{results.sqft.toFixed(2)}</td></tr>
-          </tbody>
-        </table>
+        <ReportTable results={results} />
       </div>
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-2">Side Lengths</h2>
-        <ul className="list-disc list-inside">
-          {results.lengths.slice(0, -1).map((len, i) => (
-            <li key={i}>Side {i + 1}: {len.toFixed(2)} ft</li>
-          ))}
-        </ul>
+        <SideLengthsList lengths={results.lengths} />
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Map with Plot</h2>
@@ -157,7 +175,6 @@ const PrintLayout = React.forwardRef(({ results, reportImage }, ref) => {
     </div>
   );
 });
-
 const MapCalculator = () => {
   const [image, setImage] = useState(null);
   const containerRef = useRef(null);
@@ -195,6 +212,7 @@ const MapCalculator = () => {
   const [isPlotFinished, setIsPlotFinished] = useState(false);
   const [reportImage, setReportImage] = useState(null);
   const [snapHint, setSnapHint] = useState(false);
+  const loadInputRef = useRef(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -396,6 +414,56 @@ const MapCalculator = () => {
     window.print();
   }
 
+  // Save / Load handlers
+  const handleSaveJSON = () => {
+    try {
+      const data = { scale, plotPoints };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mouza-map-data.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Save failed', err);
+      alert('Failed to save data');
+    }
+  };
+
+  const handleLoadClick = () => {
+    if (loadInputRef.current) loadInputRef.current.click();
+  };
+
+  const handleLoadChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const obj = JSON.parse(reader.result);
+        if (!obj || typeof obj !== 'object') throw new Error('Invalid file');
+        if (!Array.isArray(obj.plotPoints) || obj.plotPoints.some(p => typeof p.x !== 'number' || typeof p.y !== 'number')) throw new Error('Invalid points');
+        if (obj.scale && !(typeof obj.scale === 'number' && obj.scale > 0)) throw new Error('Invalid scale');
+        if (obj.scale) setScale(obj.scale);
+        setPlotPoints(obj.plotPoints);
+        setIsPlotFinished(false);
+        setResults(null);
+        setMode('drawing_plot');
+        setCalibrationLine([]);
+        setSnapHint(false);
+      } catch (err) {
+        console.error('Load failed', err);
+        alert('Failed to load data: ' + err.message);
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const flatPlotPoints = plotPoints.flatMap(p => [p.x, p.y]);
 
   // Helpers for pinch-zoom
@@ -431,7 +499,13 @@ const MapCalculator = () => {
                <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">1. Upload Map</label>
                 <input type="file" onChange={handleImageUpload} accept=".pdf,.png,.jpg,.jpeg" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
-              </div>
+                {/* Save / Load JSON controls */}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button onClick={handleSaveJSON} className="px-4 py-2 rounded-md font-semibold text-white bg-slate-700 hover:bg-slate-800">Save JSON</button>
+              <button onClick={handleLoadClick} className="px-4 py-2 rounded-md font-semibold text-white bg-slate-500 hover:bg-slate-600">Load JSON</button>
+              <input ref={loadInputRef} type="file" accept="application/json" className="hidden" onChange={handleLoadChange} />
+            </div>
+          </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">2. Set Scale</label>
                 <button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); lastCalibClickRef.current = 0; }} disabled={!image || mode === 'calibrating'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">{mode === 'calibrating' ? 'Drawing scale... (drag or 2 clicks)' : 'Set Scale'}</button>
@@ -488,7 +562,18 @@ const MapCalculator = () => {
 
           {scale && !results && (
             <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-3 mb-4 text-sm" role="alert">
-              <p><span className="font-bold">Scale Set:</span> 1 foot ≈ {scale.toFixed(2)} pixels. Ready to draw a plot.</p>
+              <div className="flex items-center justify-between gap-3">
+                <p><span className="font-bold">Scale Set:</span> 1 ft ≈ {scale.toFixed(DECIMALS)} px. Ready to draw a plot.</p>
+                <button onClick={() => { setMode('calibrating'); setCalibrationLine([]); setIsDrawing(false); }} className="px-3 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700">Re-calibrate</button>
+              </div>
+            </div>
+          )}
+
+          {/* Scale badge above canvas */}
+          {scale && (
+            <div className="mb-2 flex items-center gap-2 text-xs">
+              <span className="inline-block px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">1 ft ≈ {scale.toFixed(DECIMALS)} px</span>
+              <button onClick={() => { setMode('calibrating'); setCalibrationLine([]); setIsDrawing(false); }} className="text-emerald-700 underline">Change</button>
             </div>
           )}
           
