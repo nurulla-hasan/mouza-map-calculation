@@ -270,6 +270,7 @@ const MapCalculator = () => {
   // Reusable logic to add/select based on a stage-space position
   const addPointerByPos = (pos) => {
     if (mode === 'none') return;
+    const SNAP_THRESHOLD = 2; // pixels in stage-space
     if (mode === 'calibrating') {
       const now = Date.now();
       if (now - lastCalibClickRef.current < 250) return;
@@ -288,7 +289,20 @@ const MapCalculator = () => {
         // remain in calibrating; user will press Confirm Scale
       }
     } else if (mode === 'drawing_plot') {
-      setPlotPoints(prev => [...prev, { x: pos.x, y: pos.y }]);
+      setPlotPoints(prev => {
+        let { x, y } = pos;
+        if (prev.length > 0) {
+          const first = prev[0];
+          const dx = x - first.x;
+          const dy = y - first.y;
+          if (Math.hypot(dx, dy) <= SNAP_THRESHOLD) {
+            // snap to first point to avoid tiny closing edge
+            x = first.x;
+            y = first.y;
+          }
+        }
+        return [...prev, { x, y }];
+      });
     }
   };
 
@@ -339,8 +353,19 @@ const MapCalculator = () => {
   };
 
   const handlePointDragEnd = (e, index) => {
+    const SNAP_THRESHOLD = 10;
     const newPoints = [...plotPoints];
-    newPoints[index] = { x: e.target.x(), y: e.target.y() };
+    let x = e.target.x();
+    let y = e.target.y();
+    // if dropping near first point (and not the first itself), snap
+    if (index !== 0 && newPoints.length > 0) {
+      const first = newPoints[0];
+      if (Math.hypot(x - first.x, y - first.y) <= SNAP_THRESHOLD) {
+        x = first.x;
+        y = first.y;
+      }
+    }
+    newPoints[index] = { x, y };
     setPlotPoints(newPoints);
   };
 
