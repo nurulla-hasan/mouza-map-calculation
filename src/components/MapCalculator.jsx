@@ -165,6 +165,15 @@ const MapCalculator = () => {
   const printRef = useRef(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const lastCalibClickRef = useRef(0);
+  const isPinchingRef = useRef(false);
+  const lastPinchDistRef = useRef(0);
+  const pinchStartRef = useRef({ distance: 0, scale: 1, stagePos: { x: 0, y: 0 }, centerClient: { x: 0, y: 0 } });
+  const pinchRafRef = useRef(0);
+  const blockTapRef = useRef(false);
+  const pinchLastStartRef = useRef(0);
+  const TAP_GRACE_MS = 200; // increased grace window for two-finger detection
+  const TAP_MIN_MS = 60;    // minimum touch duration to count as a tap (lowered)
+  const touchSessionRef = useRef({ active: false, single: true, moved: false, startClient: { x: 0, y: 0 }, startTime: 0 });
 
   // State Management
   const [mode, setMode] = useState('none');
@@ -255,39 +264,36 @@ const MapCalculator = () => {
     return { x: (pos.x - stagePos.x) / stageScale, y: (pos.y - stagePos.y) / stageScale };
   };
 
-  const handleStageMouseDown = (e) => {
+  // Reusable logic to add/select based on a stage-space position
+  const addPointerByPos = (pos) => {
     if (mode === 'none') return;
-    const stage = e.target.getStage();
-    const pos = getPointerPos(stage);
     if (mode === 'calibrating') {
       const now = Date.now();
-      if (now - lastCalibClickRef.current < 250) {
-        // Ignore rapid successive clicks (double-click)
-        return;
-      }
+      if (now - lastCalibClickRef.current < 250) return;
       lastCalibClickRef.current = now;
       if (calibrationLine.length < 2) {
-        // First click
         setCalibrationLine([pos.x, pos.y]);
         setIsDrawing(true);
       } else {
-        // Second click
         const [x1, y1] = calibrationLine;
         const x2 = pos.x;
         const y2 = pos.y;
         const dist = Math.hypot(x2 - x1, y2 - y1);
-        if (dist < 1e-3) {
-          // Ignore extremely small lines
-          return;
-        }
+        if (dist < 1e-3) return;
         setCalibrationLine([x1, y1, x2, y2]);
         setIsDrawing(false);
-        setMode('none');
-        setIsModalOpen(true);
+        // remain in calibrating; user will press Confirm Scale
       }
     } else if (mode === 'drawing_plot') {
       setPlotPoints(prev => [...prev, { x: pos.x, y: pos.y }]);
     }
+  };
+
+  const handleStageMouseDown = (e) => {
+    if (mode === 'none') return;
+    const stage = e.target.getStage();
+    const pos = getPointerPos(stage);
+    addPointerByPos(pos);
   };
 
   const handleWheel = (e) => {
@@ -348,24 +354,25 @@ const MapCalculator = () => {
 
   const flatPlotPoints = plotPoints.flatMap(p => [p.x, p.y]);
 
-  // Mobile-friendly zoom controls
-  const zoomAtCenter = (factor) => {
+  // Helpers for pinch-zoom
+  const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+  const getMidpoint = (t1, t2) => ({ x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 });
+  const getDistance = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  const toLocalPointer = (client) => {
     const stage = stageRef.current;
-    if (!stage) return;
-    const oldScale = stageScale;
-    const newScale = Math.max(0.1, Math.min(10, oldScale * factor));
-    const pointer = { x: stageSize.width / 2, y: stageSize.height / 2 };
+    if (!stage) return { x: 0, y: 0 };
+    const rect = stage.container().getBoundingClientRect();
+    return { x: client.x - rect.left, y: client.y - rect.top };
+  };
+  const zoomAtPoint = (newScale, clientPoint, anchorFrom = { scale: stageScale, pos: stagePos }) => {
+    const oldScale = anchorFrom.scale;
+    const pointer = toLocalPointer(clientPoint);
     const mousePointTo = {
-      x: (pointer.x - stagePos.x) / oldScale,
-      y: (pointer.y - stagePos.y) / oldScale,
+      x: (pointer.x - anchorFrom.pos.x) / oldScale,
+      y: (pointer.y - anchorFrom.pos.y) / oldScale,
     };
     setStageScale(newScale);
     setStagePos({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
-  };
-
-  const resetView = () => {
-    setStageScale(1);
-    setStagePos({ x: 0, y: 0 });
   };
 
   return (
@@ -383,13 +390,49 @@ const MapCalculator = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">2. Set Scale</label>
-                <button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); lastCalibClickRef.current = 0; }} disabled={!image || mode === 'calibrating'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">{mode === 'calibrating' ? 'Drawing scale... (2 clicks)' : 'Set Scale'}</button>
+                <button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); lastCalibClickRef.current = 0; }} disabled={!image || mode === 'calibrating'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">{mode === 'calibrating' ? 'Drawing scale... (drag or 2 clicks)' : 'Set Scale'}</button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">3. Draw Plot</label>
                 <button onClick={() => { setMode('drawing_plot'); clearPlot(); }} disabled={!scale || mode === 'drawing_plot'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400">{mode === 'drawing_plot' ? 'Click corners on map...' : 'Draw Plot'}</button>
               </div>
             </div>
+            {mode === 'calibrating' && (
+              <div className="flex gap-4 mt-4">
+                <button
+                  onClick={() => {
+                    if (calibrationLine.length >= 4) {
+                      setIsDrawing(false);
+                      setMode('none');
+                      setIsModalOpen(true);
+                    }
+                  }} 
+                  disabled={calibrationLine.length < 4}
+                  className="flex-grow px-4 py-2 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  Confirm Scale
+                </button>
+                <button
+                  onClick={() => {
+                    if (calibrationLine.length >= 4) {
+                      // keep start point and allow re-drag
+                      setCalibrationLine([calibrationLine[0], calibrationLine[1]]);
+                      setIsDrawing(true);
+                    }
+                  }}
+                  disabled={calibrationLine.length < 4}
+                  className="px-4 py-2 rounded-md font-semibold text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400"
+                >
+                  Undo
+                </button>
+                <button
+                  onClick={() => { setCalibrationLine([]); setIsDrawing(false); setMode('none'); }}
+                  className="px-4 py-2 rounded-md font-semibold text-white bg-red-500 hover:bg-red-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
             {mode === 'drawing_plot' && (
               <div className="flex gap-4 mt-4">
                 <button onClick={finishPlot} disabled={plotPoints.length < 3} className="flex-grow px-4 py-2 rounded-md font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400">Finish & Calculate</button>
@@ -404,12 +447,6 @@ const MapCalculator = () => {
               <p><span className="font-bold">Scale Set:</span> 1 foot ≈ {scale.toFixed(2)} pixels. Ready to draw a plot.</p>
             </div>
           )}
-          {/* Zoom Controls for Mobile */}
-          <div className="flex gap-2 justify-end mb-3">
-            <button onClick={() => zoomAtCenter(1.2)} className="px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">Zoom In</button>
-            <button onClick={() => zoomAtCenter(1/1.2)} className="px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">Zoom Out</button>
-            <button onClick={resetView} className="px-3 py-1.5 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">Reset View</button>
-          </div>
           
           <div className={`border border-gray-300 rounded-lg shadow-sm overflow-hidden ${mode !== 'none' ? 'cursor-crosshair' : 'cursor-grab'} touch-none select-none`} ref={containerRef}>
             <Stage 
@@ -429,19 +466,112 @@ const MapCalculator = () => {
                 }
               }}
               onTouchStart={(e) => {
-                // prevent page scroll/zoom
                 e.evt.preventDefault();
-                handleStageMouseDown(e);
+                const touches = e.evt.touches;
+                if (touches && touches.length === 2) {
+                  isPinchingRef.current = true;
+                  const d = getDistance(touches[0], touches[1]);
+                  lastPinchDistRef.current = d;
+                  pinchStartRef.current = {
+                    distance: d,
+                    scale: stageScale,
+                    stagePos: { ...stagePos },
+                    centerClient: getMidpoint(touches[0], touches[1]),
+                  };
+                  // suppress single-touch actions during pinch
+                  blockTapRef.current = true;
+                  pinchLastStartRef.current = Date.now();
+                  touchSessionRef.current.active = false;
+                } else if (touches && touches.length === 1) {
+                  // start single-touch session; will add on touchend if still single
+                  touchSessionRef.current = {
+                    active: true,
+                    single: true,
+                    moved: false,
+                    startClient: { x: touches[0].clientX, y: touches[0].clientY },
+                    startTime: Date.now(),
+                  };
+                  // reset last pinch marker for this session
+                  pinchLastStartRef.current = 0;
+                }
               }}
               onTouchMove={(e) => {
                 e.evt.preventDefault();
-                if (mode === 'calibrating' && isDrawing) {
+                const touches = e.evt.touches;
+                if (isPinchingRef.current && touches && touches.length === 2) {
+                  blockTapRef.current = true;
+                  const newDist = getDistance(touches[0], touches[1]);
+                  const start = pinchStartRef.current;
+                  const delta = Math.abs(newDist - lastPinchDistRef.current);
+                  // deadzone to avoid jitter
+                  if (delta < 0.5) return;
+                  if (!pinchRafRef.current) {
+                    pinchRafRef.current = requestAnimationFrame(() => {
+                      pinchRafRef.current = 0;
+                      if (start.distance > 0) {
+                        const rawScale = start.scale * (newDist / start.distance);
+                        const clamped = clamp(rawScale, 0.1, 10);
+                        const centerClient = getMidpoint(touches[0], touches[1]);
+                        zoomAtPoint(clamped, centerClient, { scale: start.scale, pos: start.stagePos });
+                      }
+                      lastPinchDistRef.current = newDist;
+                    });
+                  }
+                } else if (mode === 'calibrating' && isDrawing) {
+                  // Update live line for single-touch drag
                   const stage = e.target.getStage();
                   const pos = getPointerPos(stage);
                   setCalibrationLine((prev) => {
                     if (prev.length >= 2) return [prev[0], prev[1], pos.x, pos.y];
                     return prev;
                   });
+                  // mark as moved to avoid treating as tap
+                  if (touchSessionRef.current.active && touchSessionRef.current.single) {
+                    const t = e.evt.touches[0];
+                    const dx = t.clientX - touchSessionRef.current.startClient.x;
+                    const dy = t.clientY - touchSessionRef.current.startClient.y;
+                    if (Math.hypot(dx, dy) > 6) touchSessionRef.current.moved = true;
+                  }
+                }
+              }}
+              onTouchEnd={(e) => {
+                const touches = e.evt.touches;
+                if (!touches || touches.length < 2) {
+                  isPinchingRef.current = false;
+                  lastPinchDistRef.current = 0;
+                  pinchStartRef.current = { distance: 0, scale: stageScale, stagePos: { ...stagePos }, centerClient: { x: 0, y: 0 } };
+                  // if we suppressed taps due to pinch, clear and do nothing
+                  if (blockTapRef.current) {
+                    blockTapRef.current = false;
+                    touchSessionRef.current.active = false;
+                    return;
+                  }
+                  // complete a single-touch tap if session is valid
+                  if (touchSessionRef.current.active && touchSessionRef.current.single && !touchSessionRef.current.moved) {
+                    const now = Date.now();
+                    const dur = now - (touchSessionRef.current.startTime || now);
+                    // if pinch started within grace window AFTER touch start, or tap too short, ignore
+                    const startTime = (touchSessionRef.current.startTime || now);
+                    const pinchWithinWindow = pinchLastStartRef.current >= startTime && (pinchLastStartRef.current - startTime) <= TAP_GRACE_MS;
+                    if (pinchWithinWindow || dur < TAP_MIN_MS) {
+                      touchSessionRef.current.active = false;
+                      return;
+                    }
+                    const stage = stageRef.current;
+                    if (stage) {
+                      const rect = stage.container().getBoundingClientRect();
+                      const local = {
+                        x: touchSessionRef.current.startClient.x - rect.left,
+                        y: touchSessionRef.current.startClient.y - rect.top,
+                      };
+                      const pos = {
+                        x: (local.x - stagePos.x) / stageScale,
+                        y: (local.y - stagePos.y) / stageScale,
+                      };
+                      addPointerByPos(pos);
+                    }
+                  }
+                  touchSessionRef.current.active = false;
                 }
               }}
               scaleX={stageScale}
@@ -453,14 +583,24 @@ const MapCalculator = () => {
             >
               <Layer>
                 {image && <Image image={image} />}
-                {calibrationLine.length > 0 && <Line points={calibrationLine} stroke="#E53E3E" strokeWidth={3 / stageScale} dash={[10 / stageScale, 5 / stageScale]} />}
+                {calibrationLine.length > 0 && (
+                  <>
+                    <Line points={calibrationLine} stroke="#E53E3E" strokeWidth={3 / stageScale} dash={[10 / stageScale, 5 / stageScale]} />
+                    {calibrationLine.length >= 2 && (
+                      <Circle x={calibrationLine[0]} y={calibrationLine[1]} radius={8 / stageScale} fill="#E53E3E" shadowColor="#000" shadowBlur={8 / stageScale} shadowOpacity={0.25} stroke="white" strokeWidth={2 / stageScale} />
+                    )}
+                    {calibrationLine.length >= 4 && (
+                      <Circle x={calibrationLine[2]} y={calibrationLine[3]} radius={8 / stageScale} fill="#E53E3E" shadowColor="#000" shadowBlur={8 / stageScale} shadowOpacity={0.25} stroke="white" strokeWidth={2 / stageScale} />
+                    )}
+                  </>
+                )}
                 {plotPoints.length > 0 && <Line points={[...flatPlotPoints, ... (isPlotFinished ? [plotPoints[0].x, plotPoints[0].y] : [])]} stroke="#3182CE" strokeWidth={3 / stageScale} closed={isPlotFinished} />}
                 {plotPoints.map((point, i) => (
                   <Circle
                     key={i}
                     x={point.x}
                     y={point.y}
-                    radius={6 / stageScale}
+                    radius={8 / stageScale}
                     fill="#3182CE"
                     stroke="white"
                     strokeWidth={2 / stageScale}

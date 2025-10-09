@@ -4,7 +4,7 @@ import MapCalculator from './components/MapCalculator';
 
 function App() {
   return (
-    <div className="App">
+    <div>
       <MapCalculator />
     </div>
   );
