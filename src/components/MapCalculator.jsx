@@ -96,15 +96,15 @@ const ResultsDisplay = ({ results, onPrint }) => {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <p className="text-sm text-gray-500">Area (Shotok)</p>
+          <p className="text-sm text-gray-500">Area (শতক)</p>
           <p className="text-2xl font-bold text-green-600">{results.shotok.toFixed(2)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <p className="text-sm text-gray-500">Area (Katha)</p>
+          <p className="text-sm text-gray-500">Area (কাঠা)</p>
           <p className="text-2xl font-bold text-blue-600">{results.katha.toFixed(2)}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
-          <p className="text-sm text-gray-500">Area (Sq. Ft.)</p>
+          <p className="text-sm text-gray-500">Area (বর্গফুট)</p>
           <p className="text-2xl font-bold text-purple-600">{results.sqft.toFixed(2)}</p>
         </div>
       </div>
@@ -135,9 +135,9 @@ const PrintLayout = React.forwardRef(({ results, reportImage }, ref) => {
             </tr>
           </thead>
           <tbody>
-            <tr><td className="p-2 border">Shotok</td><td className="p-2 border">{results.shotok.toFixed(2)}</td></tr>
-            <tr><td className="p-2 border">Katha</td><td className="p-2 border">{results.katha.toFixed(2)}</td></tr>
-            <tr><td className="p-2 border">Square Feet</td><td className="p-2 border">{results.sqft.toFixed(2)}</td></tr>
+            <tr><td className="p-2 border">শতক</td><td className="p-2 border">{results.shotok.toFixed(2)}</td></tr>
+            <tr><td className="p-2 border">কাঠা</td><td className="p-2 border">{results.katha.toFixed(2)}</td></tr>
+            <tr><td className="p-2 border">বর্গফুট</td><td className="p-2 border">{results.sqft.toFixed(2)}</td></tr>
           </tbody>
         </table>
       </div>
