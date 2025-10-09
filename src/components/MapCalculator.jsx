@@ -501,7 +501,14 @@ const MapCalculator = () => {
                 <input type="file" onChange={handleImageUpload} accept=".pdf,.png,.jpg,.jpeg" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100" />
                 {/* Save / Load JSON controls */}
             <div className="mt-4 flex flex-wrap gap-3">
-              <button onClick={handleSaveJSON} className="px-4 py-2 rounded-md font-semibold text-white bg-slate-700 hover:bg-slate-800">Save JSON</button>
+              <button
+                onClick={handleSaveJSON}
+                disabled={!isPlotFinished || !results}
+                title={!isPlotFinished || !results ? 'Finish & Calculate the plot first' : undefined}
+                className="px-4 py-2 rounded-md font-semibold text-white bg-slate-700 hover:bg-slate-800 disabled:bg-gray-400 disabled:hover:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Save JSON
+              </button>
               <button onClick={handleLoadClick} className="px-4 py-2 rounded-md font-semibold text-white bg-slate-500 hover:bg-slate-600">Load JSON</button>
               <input ref={loadInputRef} type="file" accept="application/json" className="hidden" onChange={handleLoadChange} />
             </div>
