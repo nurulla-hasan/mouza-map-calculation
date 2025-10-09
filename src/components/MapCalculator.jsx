@@ -172,14 +172,17 @@ const MapCalculator = () => {
   const blockTapRef = useRef(false);
   const pinchLastStartRef = useRef(0);
   const TAP_GRACE_MS = 200; // increased grace window for two-finger detection
-  const TAP_MIN_MS = 60;    // minimum touch duration to count as a tap (lowered)
+  const TAP_MIN_MS = 50;    // minimum touch duration to count as a tap (lowered)
   const touchSessionRef = useRef({ active: false, single: true, moved: false, startClient: { x: 0, y: 0 }, startTime: 0 });
+  const wheelRafRef = useRef(0);
+  const wheelAccumRef = useRef(0);
 
   // State Management
   const [mode, setMode] = useState('none');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [stageScale, setStageScale] = useState(1);
+  const [isPinching, setIsPinching] = useState(false);
   
   // Scale State
   const [scale, setScale] = useState(null);
@@ -299,15 +302,27 @@ const MapCalculator = () => {
   const handleWheel = (e) => {
     e.evt.preventDefault();
     const stage = e.target.getStage();
-    const oldScale = stage.scaleX();
+    if (!stage) return;
     const pointer = stage.getPointerPosition();
+    const oldScale = stageScale;
     const mousePointTo = {
-      x: (pointer.x - stage.x()) / oldScale,
-      y: (pointer.y - stage.y()) / oldScale,
+      x: (pointer.x - stagePos.x) / oldScale,
+      y: (pointer.y - stagePos.y) / oldScale,
     };
-    const newScale = e.evt.deltaY > 0 ? oldScale / 1.1 : oldScale * 1.1;
-    setStageScale(newScale);
-    setStagePos({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+    // accumulate wheel delta and smooth via RAF
+    wheelAccumRef.current += e.evt.deltaY;
+    if (!wheelRafRef.current) {
+      wheelRafRef.current = requestAnimationFrame(() => {
+        wheelRafRef.current = 0;
+        const delta = wheelAccumRef.current;
+        wheelAccumRef.current = 0;
+        // convert delta to smooth zoom factor
+        const factor = Math.pow(1.0015, -delta); // negative delta zooms in
+        const newScale = clamp(oldScale * factor, 0.1, 10);
+        setStageScale(newScale);
+        setStagePos({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+      });
+    }
   };
 
   const _handleModalSubmit = (realDistance) => {
@@ -470,6 +485,7 @@ const MapCalculator = () => {
                 const touches = e.evt.touches;
                 if (touches && touches.length === 2) {
                   isPinchingRef.current = true;
+                  setIsPinching(true);
                   const d = getDistance(touches[0], touches[1]);
                   lastPinchDistRef.current = d;
                   pinchStartRef.current = {
@@ -538,6 +554,7 @@ const MapCalculator = () => {
                 const touches = e.evt.touches;
                 if (!touches || touches.length < 2) {
                   isPinchingRef.current = false;
+                  setIsPinching(false);
                   lastPinchDistRef.current = 0;
                   pinchStartRef.current = { distance: 0, scale: stageScale, stagePos: { ...stagePos }, centerClient: { x: 0, y: 0 } };
                   // if we suppressed taps due to pinch, clear and do nothing
@@ -578,7 +595,7 @@ const MapCalculator = () => {
               scaleY={stageScale}
               x={stagePos.x}
               y={stagePos.y}
-              draggable={mode === 'none' || isPlotFinished}
+              draggable={(mode === 'none' && !isPinching) || isPlotFinished}
               onDragEnd={(e) => setStagePos(e.target.position())}
             >
               <Layer>
