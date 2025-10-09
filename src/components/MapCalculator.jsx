@@ -56,6 +56,12 @@ const Modal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
+  const handleClose = () => {
+    setDistance('');
+    setError('');
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 print:hidden">
       <div className="bg-white p-6 rounded-lg shadow-xl w-11/12 md:w-1/3">
@@ -71,7 +77,7 @@ const Modal = ({ isOpen, onClose, onSubmit }) => {
         />
         {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
         <div className="flex justify-end gap-4">
-          <button onClick={onClose} className="px-4 py-2 rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200">Cancel</button>
+          <button onClick={handleClose} className="px-4 py-2 rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200">Cancel</button>
           <button onClick={handleSubmit} className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700">Submit</button>
         </div>
       </div>
@@ -158,6 +164,7 @@ const MapCalculator = () => {
   const stageRef = useRef(null);
   const printRef = useRef(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const lastCalibClickRef = useRef(0);
 
   // State Management
   const [mode, setMode] = useState('none');
@@ -253,6 +260,12 @@ const MapCalculator = () => {
     const stage = e.target.getStage();
     const pos = getPointerPos(stage);
     if (mode === 'calibrating') {
+      const now = Date.now();
+      if (now - lastCalibClickRef.current < 250) {
+        // Ignore rapid successive clicks (double-click)
+        return;
+      }
+      lastCalibClickRef.current = now;
       if (calibrationLine.length < 2) {
         // First click
         setCalibrationLine([pos.x, pos.y]);
@@ -350,7 +363,7 @@ const MapCalculator = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">2. Set Scale</label>
-                <button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); }} disabled={!image || mode === 'calibrating'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">{mode === 'calibrating' ? 'Drawing scale... (2 clicks)' : 'Set Scale'}</button>
+                <button onClick={() => { setMode('calibrating'); clearPlot(); setIsDrawing(false); setCalibrationLine([]); lastCalibClickRef.current = 0; }} disabled={!image || mode === 'calibrating'} className="w-full px-4 py-2 rounded-md font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400">{mode === 'calibrating' ? 'Drawing scale... (2 clicks)' : 'Set Scale'}</button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">3. Draw Plot</label>
