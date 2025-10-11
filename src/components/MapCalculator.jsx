@@ -761,13 +761,19 @@ const MapCalculator = () => {
                 </Button>
                 <Button
                   onClick={() => {
+                    // If second point exists, undo only the second point and keep the first
                     if (calibrationLine.length >= 4) {
-                      // keep start point and allow re-drag
                       setCalibrationLine([calibrationLine[0], calibrationLine[1]]);
                       setIsDrawing(true);
+                    } else if (calibrationLine.length >= 2) {
+                      // If only first point exists, clear all
+                      setCalibrationLine([]);
+                      setIsDrawing(false);
+                      // reset tap debounce so user can set a new first point immediately
+                      lastCalibClickRef.current = 0;
                     }
                   }}
-                  disabled={calibrationLine.length < 4}
+                  disabled={calibrationLine.length < 2}
                   variant="outline"
                 >
                   পূর্বাবস্থায় ফেরান
