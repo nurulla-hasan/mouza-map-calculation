@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { X } from 'lucide-react';
 
 // Setup PDF.js worker (Vite-friendly)
 // Use the ESM worker path. Vite will resolve this URL at build time.
@@ -782,7 +783,7 @@ const MapCalculator = () => {
                   onClick={() => { setCalibrationLine([]); setIsDrawing(false); setMode('none'); }}
                   variant="destructive"
                 >
-                  বাতিল
+                  <X />
                 </Button>
               </div>
             )}
@@ -791,6 +792,9 @@ const MapCalculator = () => {
                 <Button onClick={finishPlot} disabled={plotPoints.length < 3} className="flex-grow">শেষ করুন ও হিসাব করুন</Button>
                 <Button onClick={() => setPlotPoints(p => p.slice(0, -1))} disabled={plotPoints.length === 0} variant="yellow">পূর্বাবস্থায় ফেরান</Button>
                 <Button onClick={clearPlot} disabled={plotPoints.length === 0} variant="destructive">সাফ করুন</Button>
+                <Button onClick={() => { setMode('none'); setIsDrawing(false); setSnapHint(false); }} variant="destructive" title="আঁকা বন্ধ করুন">
+                  <X />
+                </Button>
               </div>
             )}
           </div>
