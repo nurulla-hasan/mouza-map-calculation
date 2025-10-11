@@ -307,11 +307,21 @@ const MapCalculator = () => {
     setStagePos({ x: 0, y: 0 });
   };
 
+  // Load scale from localStorage on component mount
+  useEffect(() => {
+    const savedScale = localStorage.getItem('mapScale');
+    if (savedScale) {
+      setScale(parseFloat(savedScale));
+    }
+  }, []);
+
   const handleManualScaleSubmit = (e) => {
     e.preventDefault();
     const scaleValue = parseFloat(manualScale);
     if (!isNaN(scaleValue) && scaleValue > 0) {
       setScale(scaleValue);
+      // Save scale to localStorage
+      localStorage.setItem('mapScale', scaleValue.toString());
       toast.success(`স্কেল সেট করা হয়েছে: 1 পিক্সেল = ${scaleValue.toFixed(2)} ফুট`);
       setMode('none');
       setShowManualScale(false);
@@ -457,6 +467,12 @@ const MapCalculator = () => {
     const pixelDistance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     const newScale = pixelDistance / realDistance;
     setScale(newScale);
+    // Persist scale like handleManualScaleSubmit
+    try {
+      localStorage.setItem('mapScale', newScale.toFixed(DECIMALS).toString());
+    } catch (e) {
+      // ignore storage errors
+    }
     setIsModalOpen(false);
     setCalibrationLine([]);
     toast.success('স্কেল সেট হয়েছে');
