@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 // Setup PDF.js worker (Vite-friendly)
 // Use the ESM worker path. Vite will resolve this URL at build time.
@@ -385,6 +385,45 @@ const MapCalculator = () => {
     return { x: (pos.x - stagePos.x) / stageScale, y: (pos.y - stagePos.y) / stageScale };
   };
 
+  // Compute stage-space coordinates of the visual center (crosshair)
+  const getStageCenterPoint = () => {
+    const cx = stageSize.width / 2;
+    const cy = stageSize.height / 2;
+    return { x: (cx - stagePos.x) / stageScale, y: (cy - stagePos.y) / stageScale };
+  };
+
+  // Add the current center point depending on mode (calibration or plot drawing)
+  const addCenterPoint = () => {
+    const pt = getStageCenterPoint();
+    if (mode === 'calibrating') {
+      if (calibrationLine.length < 2) {
+        setCalibrationLine([pt.x, pt.y]);
+        setIsDrawing(true);
+      } else {
+        const [x1, y1] = calibrationLine;
+        const x2 = pt.x;
+        const y2 = pt.y;
+        const dist = Math.hypot(x2 - x1, y2 - y1);
+        if (dist < 1e-3) return;
+        setCalibrationLine([x1, y1, x2, y2]);
+        setIsDrawing(false);
+      }
+    } else if (mode === 'drawing_plot' && !isPlotFinished) {
+      setPlotPoints((prev) => {
+        let p = pt;
+        if (prev.length > 0) {
+          const first = prev[0];
+          const SNAP_THRESHOLD = 5;
+          if (Math.hypot(p.x - first.x, p.y - first.y) <= SNAP_THRESHOLD) {
+            p = first;
+          }
+        }
+        setSnapHint(false);
+        return [...prev, p];
+      });
+    }
+  };
+
   // Reusable logic to add/select based on a stage-space position
   const addPointerByPos = (pos) => {
     if (mode === 'none') return;
@@ -427,10 +466,8 @@ const MapCalculator = () => {
   };
 
   const handleStageMouseDown = (e) => {
-    if (mode === 'none') return;
-    const stage = e.target.getStage();
-    const pos = getPointerPos(stage);
-    addPointerByPos(pos);
+    // Disable tap-to-add; use the centered crosshair + "পয়েন্ট যোগ করুন" button instead
+    return;
   };
 
   const handleWheel = (e) => {
@@ -808,7 +845,7 @@ const MapCalculator = () => {
             </div>
           )}
 
-          <div className={`border border-gray-300 rounded-lg shadow-sm overflow-hidden ${mode !== 'none' ? 'cursor-crosshair' : 'cursor-grab'} touch-none select-none`} ref={containerRef}>
+          <div className={`relative border border-gray-300 rounded-lg shadow-sm overflow-hidden cursor-grab touch-none select-none`} ref={containerRef}>
             <Stage
               ref={stageRef}
               width={stageSize.width}
@@ -816,16 +853,10 @@ const MapCalculator = () => {
               onMouseDown={handleStageMouseDown}
               onWheel={handleWheel}
               onMouseMove={(e) => {
-                if (mode === 'calibrating' && isDrawing) {
-                  const stage = e.target.getStage();
-                  const pos = getPointerPos(stage);
-                  setCalibrationLine((prev) => {
-                    if (prev.length >= 2) return [prev[0], prev[1], pos.x, pos.y];
-                    return prev;
-                  });
+                if (mode === 'calibrating') {
+                  // Center-add workflow: do not live-drag the second point with mouse
                 } else if (mode === 'drawing_plot' && !isPlotFinished && plotPoints.length > 0) {
-                  const stage = e.target.getStage();
-                  const pos = getPointerPos(stage);
+                  const pos = getStageCenterPoint();
                   const first = plotPoints[0];
                   const SNAP_VISUAL_THRESHOLD = 5; // stage-space pixels
                   const near = Math.hypot(pos.x - first.x, pos.y - first.y) <= SNAP_VISUAL_THRESHOLD;
@@ -885,24 +916,10 @@ const MapCalculator = () => {
                       lastPinchDistRef.current = newDist;
                     });
                   }
-                } else if (mode === 'calibrating' && isDrawing) {
-                  // Update live line for single-touch drag
-                  const stage = e.target.getStage();
-                  const pos = getPointerPos(stage);
-                  setCalibrationLine((prev) => {
-                    if (prev.length >= 2) return [prev[0], prev[1], pos.x, pos.y];
-                    return prev;
-                  });
-                  // mark as moved to avoid treating as tap
-                  if (touchSessionRef.current.active && touchSessionRef.current.single) {
-                    const t = e.evt.touches[0];
-                    const dx = t.clientX - touchSessionRef.current.startClient.x;
-                    const dy = t.clientY - touchSessionRef.current.startClient.y;
-                    if (Math.hypot(dx, dy) > 6) touchSessionRef.current.moved = true;
-                  }
+                } else if (mode === 'calibrating') {
+                  // Center-add workflow: do not live-drag the second point with touch
                 } else if (mode === 'drawing_plot' && !isPlotFinished && plotPoints.length > 0 && touches && touches.length === 1) {
-                  const stage = e.target.getStage();
-                  const pos = getPointerPos(stage);
+                  const pos = getStageCenterPoint();
                   const first = plotPoints[0];
                   const SNAP_VISUAL_THRESHOLD = 5; // stage-space pixels
                   const near = Math.hypot(pos.x - first.x, pos.y - first.y) <= SNAP_VISUAL_THRESHOLD;
@@ -933,19 +950,7 @@ const MapCalculator = () => {
                       touchSessionRef.current.active = false;
                       return;
                     }
-                    const stage = stageRef.current;
-                    if (stage) {
-                      const rect = stage.container().getBoundingClientRect();
-                      const local = {
-                        x: touchSessionRef.current.startClient.x - rect.left,
-                        y: touchSessionRef.current.startClient.y - rect.top,
-                      };
-                      const pos = {
-                        x: (local.x - stagePos.x) / stageScale,
-                        y: (local.y - stagePos.y) / stageScale,
-                      };
-                      addPointerByPos(pos);
-                    }
+                    // Disable tap-to-add; use the center add button instead
                   }
                   touchSessionRef.current.active = false;
                   setSnapHint(false);
@@ -955,7 +960,17 @@ const MapCalculator = () => {
               scaleY={stageScale}
               x={stagePos.x}
               y={stagePos.y}
-              draggable={(mode === 'none' || isPlotFinished) && !isPinching}
+              draggable={!isPinching}
+              onDragMove={(e) => { 
+                setStagePos(e.target.position()); 
+                if (mode === 'drawing_plot' && !isPlotFinished && plotPoints.length > 0) {
+                  const pos = getStageCenterPoint();
+                  const first = plotPoints[0];
+                  const SNAP_VISUAL_THRESHOLD = 5;
+                  const near = Math.hypot(pos.x - first.x, pos.y - first.y) <= SNAP_VISUAL_THRESHOLD;
+                  if (near !== snapHint) setSnapHint(near);
+                }
+              }}
               onDragEnd={(e) => setStagePos(e.target.position())}
             >
               <Layer>
@@ -1001,6 +1016,16 @@ const MapCalculator = () => {
                 ))}
               </Layer>
             </Stage>
+            {(mode === 'calibrating' || (mode === 'drawing_plot' && !isPlotFinished)) && (
+              <>
+                <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
+                  <Plus className="text-emerald-700 opacity-95 drop-shadow" size={32} />
+                </div>
+                <div className="pointer-events-auto absolute bottom-3 right-3 z-50">
+                  <Button variant="blue" size="sm" onClick={addCenterPoint}>পয়েন্ট যোগ করুন</Button>
+                </div>
+              </>
+            )}
           </div>
 
           <div ref={resultsRef}>
