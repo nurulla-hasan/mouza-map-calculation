@@ -293,7 +293,7 @@ const MapCalculator = () => {
 
   const resetState = (fullReset = true) => {
     if (fullReset) setImage(null);
-    setScale(null);
+    if (fullReset) setScale(null);
     setManualScale('');
     setShowManualScale(false);
     setCalibrationLine([]);
@@ -362,7 +362,7 @@ const MapCalculator = () => {
           await page.render({ canvasContext: context, viewport: viewport }).promise;
           const img = new window.Image();
           img.src = canvas.toDataURL();
-          img.onload = () => { resetState(true); setImage(img); };
+          img.onload = () => { resetState(false); setImage(img); };
         } catch (error) {
           console.error("Error processing PDF:", error);
           toast.error('PDF লোড করা যায়নি (ফাইলটি ক্ষতিগ্রস্ত বা অবৈধ হতে পারে)');
@@ -373,7 +373,7 @@ const MapCalculator = () => {
       reader.onload = (event) => {
         const img = new window.Image();
         img.src = event.target.result;
-        img.onload = () => { resetState(true); setImageName(file.name || 'image'); setImage(img); };
+        img.onload = () => { resetState(false); setImageName(file.name || 'image'); setImage(img); };
       };
       reader.readAsDataURL(file);
     }
@@ -781,9 +781,9 @@ const MapCalculator = () => {
               </div>
             )}
             {mode === 'drawing_plot' && (
-              <div className="flex gap-4 mt-4">
+              <div className="flex flex-wrap gap-4 mt-4">
                 <Button onClick={finishPlot} disabled={plotPoints.length < 3} className="flex-grow">শেষ করুন ও হিসাব করুন</Button>
-                <Button onClick={() => setPlotPoints(p => p.slice(0, -1))} disabled={plotPoints.length === 0} variant="secondary">পূর্বাবস্থায় ফেরান</Button>
+                <Button onClick={() => setPlotPoints(p => p.slice(0, -1))} disabled={plotPoints.length === 0} variant="yellow">পূর্বাবস্থায় ফেরান</Button>
                 <Button onClick={clearPlot} disabled={plotPoints.length === 0} variant="destructive">সাফ করুন</Button>
               </div>
             )}
