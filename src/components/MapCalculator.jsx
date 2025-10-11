@@ -791,7 +791,6 @@ const MapCalculator = () => {
               <div className="flex flex-wrap gap-4 mt-4">
                 <Button onClick={finishPlot} disabled={plotPoints.length < 3} className="flex-grow">শেষ করুন ও হিসাব করুন</Button>
                 <Button onClick={() => setPlotPoints(p => p.slice(0, -1))} disabled={plotPoints.length === 0} variant="yellow">পূর্বাবস্থায় ফেরান</Button>
-                <Button onClick={clearPlot} disabled={plotPoints.length === 0} variant="destructive">সাফ করুন</Button>
                 <Button onClick={() => { setMode('none'); setIsDrawing(false); setSnapHint(false); }} variant="destructive" title="আঁকা বন্ধ করুন">
                   <X />
                 </Button>
