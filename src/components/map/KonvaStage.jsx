@@ -297,10 +297,10 @@ export const KonvaStage = memo(({
               key={i}
               x={point.x}
               y={point.y}
-              radius={8 / stageScale}
+              radius={5 / stageScale}
               fill="#3182CE"
               stroke="white"
-              strokeWidth={2 / stageScale}
+              strokeWidth={1.5 / stageScale}
               hitStrokeWidth={20 / stageScale}
               draggable={isPlotFinished}
               onDragEnd={(e) => handlePointDragEnd(e, i)}

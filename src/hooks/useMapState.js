@@ -92,28 +92,7 @@ export const useMapState = () => {
     if (savedScale) {
       setScale(parseFloat(savedScale));
     }
-    const savedPlot = localStorage.getItem('mapPlotPoints');
-    if (savedPlot) {
-      try {
-        const parsed = JSON.parse(savedPlot);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setPlotPoints(parsed);
-          setMode('drawing_plot');
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
   }, []);
-
-  // Auto-save plot points
-  useEffect(() => {
-    if (plotPoints.length > 0) {
-      localStorage.setItem('mapPlotPoints', JSON.stringify(plotPoints));
-    } else {
-      localStorage.removeItem('mapPlotPoints');
-    }
-  }, [plotPoints]);
 
   const handleManualScaleSubmit = (e) => {
     e.preventDefault();

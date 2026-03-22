@@ -159,7 +159,7 @@ export const SidebarControls = memo(({
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">3. প্লট আঁকুন</label>
-          <Button onClick={() => { setMode('drawing_plot'); clearPlot(); }} disabled={!scale || mode === 'drawing_plot'} className="w-full">
+          <Button onClick={() => { setMode('drawing_plot'); clearPlot(); }} disabled={!image || !scale || mode === 'drawing_plot'} className="w-full">
             {mode === 'drawing_plot' ? 'ম্যাপে কোণে ক্লিক করুন' : 'প্লট আঁকুন'}
           </Button>
         </div>
