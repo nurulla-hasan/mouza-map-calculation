@@ -229,11 +229,22 @@ export const KonvaStage = memo(({
             const estWidth = (ft.length * fontSize * 0.6) + padding * 2;
             const estHeight = fontSize + padding * 2;
             
+            // Calculate a fixed offset vector perpendicular to the line to push the label away from the line
+            const perpX = -dy / distPx;
+            const perpY = dx / distPx;
+            const offsetDist = 25 / stageScale; // distance to push label away from the line
+            
             return (
               <Group>
                 <Line points={[lastPt.x, lastPt.y, targetX, targetY]} stroke="#eab308" strokeWidth={3 / stageScale} dash={[8 / stageScale, 6 / stageScale]} opacity={0.8} />
                 {distPx > 20 / stageScale && (
-                  <KonvaLabel x={midX} y={midY} offsetX={estWidth / 2} offsetY={-(estHeight / 2 + 30 / stageScale)} opacity={0.9}>
+                  <KonvaLabel 
+                    x={midX + perpX * offsetDist} 
+                    y={midY + perpY * offsetDist} 
+                    offsetX={estWidth / 2} 
+                    offsetY={estHeight / 2} 
+                    opacity={0.9}
+                  >
                     <Tag fill="#ca8a04" cornerRadius={4 / stageScale} shadowColor="black" shadowBlur={4 / stageScale} shadowOpacity={0.3} shadowOffset={{ x: 0, y: 2 / stageScale }} />
                     <Text text={`${ft} ft`} fontSize={fontSize} fill="white" padding={padding} fontStyle="bold" />
                   </KonvaLabel>
@@ -260,9 +271,21 @@ export const KonvaStage = memo(({
             const padding = 4 / stageScale;
             const estWidth = (ft.length * fontSize * 0.6) + padding * 2;
             const estHeight = fontSize + padding * 2;
+
+            // Calculate a fixed offset vector perpendicular to the line
+            const perpX = -dy / distPx;
+            const perpY = dx / distPx;
+            const offsetDist = 25 / stageScale;
             
             return (
-              <KonvaLabel key={`len-${i}`} x={midX} y={midY} offsetX={estWidth / 2} offsetY={estHeight / 2} opacity={0.9}>
+              <KonvaLabel 
+                key={`len-${i}`} 
+                x={midX + perpX * offsetDist} 
+                y={midY + perpY * offsetDist} 
+                offsetX={estWidth / 2} 
+                offsetY={estHeight / 2} 
+                opacity={0.9}
+              >
                 <Tag fill="#2563EB" cornerRadius={4 / stageScale} shadowColor="black" shadowBlur={4 / stageScale} shadowOpacity={0.3} shadowOffset={{ x: 0, y: 2 / stageScale }} />
                 <Text text={`${ft} ft`} fontSize={fontSize} fill="white" padding={padding} fontStyle="bold" />
               </KonvaLabel>
