@@ -141,7 +141,7 @@ export const SidebarControls = memo(({
                   type="number"
                   value={manualScale}
                   onChange={(e) => setManualScale(e.target.value)}
-                  placeholder="ফুট প্রতি পিক্সেল (যেমন: 0.43)"
+                  placeholder="পিক্সেল প্রতি ফুট (যেমন: 0.43)"
                   className="flex-1"
                   step="0.000001"
                   min="0.000001"
