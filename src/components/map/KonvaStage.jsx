@@ -1,6 +1,5 @@
 import React, { memo } from 'react';
 import { Stage, Layer, Image, Line, Circle, Group, Label as KonvaLabel, Tag, Text } from 'react-konva';
-import { Plus } from 'lucide-react';
 import { DECIMALS } from '@/utils/mapCalculations';
 import { Button } from '@/components/ui/button';
 
@@ -198,10 +197,10 @@ export const KonvaStage = memo(({
               x={plotPoints[0].x}
               y={plotPoints[0].y}
               radius={12 / stageScale}
-              stroke="#22c55e"
+              stroke="#e11d48"
               strokeWidth={3 / stageScale}
               dash={[6 / stageScale, 4 / stageScale]}
-              shadowColor="#22c55e"
+              shadowColor="#e11d48"
               shadowBlur={10 / stageScale}
               shadowOpacity={0.6}
             />
@@ -234,7 +233,7 @@ export const KonvaStage = memo(({
               <Group>
                 <Line points={[lastPt.x, lastPt.y, targetX, targetY]} stroke="#eab308" strokeWidth={3 / stageScale} dash={[8 / stageScale, 6 / stageScale]} opacity={0.8} />
                 {distPx > 20 / stageScale && (
-                  <KonvaLabel x={midX} y={midY} offsetX={estWidth / 2} offsetY={estHeight / 2} opacity={0.9}>
+                  <KonvaLabel x={midX} y={midY} offsetX={estWidth / 2} offsetY={-(estHeight / 2 + 30 / stageScale)} opacity={0.9}>
                     <Tag fill="#ca8a04" cornerRadius={4 / stageScale} shadowColor="black" shadowBlur={4 / stageScale} shadowOpacity={0.3} shadowOffset={{ x: 0, y: 2 / stageScale }} />
                     <Text text={`${ft} ft`} fontSize={fontSize} fill="white" padding={padding} fontStyle="bold" />
                   </KonvaLabel>
@@ -289,10 +288,30 @@ export const KonvaStage = memo(({
       {(mode === 'calibrating' || (mode === 'drawing_plot' && !isPlotFinished)) && (
         <>
           <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
-            <Plus className="text-emerald-700 opacity-95 drop-shadow" size={32} />
+            <svg width="40" height="40" viewBox="0 0 40 40" style={{ filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.8))' }}>
+              <line x1="20" y1="4" x2="20" y2="16" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="20" y1="24" x2="20" y2="36" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="4" y1="20" x2="16" y2="20" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
+              <line x1="24" y1="20" x2="36" y2="20" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="20" cy="20" r="1.5" fill="#e11d48" />
+            </svg>
           </div>
           <div className="pointer-events-auto absolute bottom-3 right-3 z-50">
-            <Button variant="blue" size="sm" onClick={addCenterPoint}>পয়েন্ট যোগ করুন</Button>
+            <Button 
+              variant="blue" 
+              size="sm" 
+              onClick={(e) => {
+                e.preventDefault();
+                addCenterPoint();
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addCenterPoint();
+              }}
+            >
+              পয়েন্ট যোগ করুন
+            </Button>
           </div>
         </>
       )}
