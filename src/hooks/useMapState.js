@@ -272,11 +272,43 @@ export const useMapState = () => {
     if (plotPoints.length < 3) return;
     setIsPlotFinished(true);
     setMode('none');
+
+    // Auto-center and zoom to fit the polygon
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    plotPoints.forEach(p => {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    });
+
+    const polyWidth = maxX - minX;
+    const polyHeight = maxY - minY;
+    
+    if (polyWidth > 0 && polyHeight > 0 && stageSize.width > 0) {
+      const padding = 60; // minimum padding in pixels
+      const scaleX = (stageSize.width - padding * 2) / polyWidth;
+      const scaleY = (stageSize.height - padding * 2) / polyHeight;
+      const newScale = clamp(Math.min(scaleX, scaleY), 0.1, 5); 
+      
+      const centerX = minX + polyWidth / 2;
+      const centerY = minY + polyHeight / 2;
+      
+      const newPos = {
+        x: stageSize.width / 2 - centerX * newScale,
+        y: stageSize.height / 2 - centerY * newScale
+      };
+
+      setStageScale(newScale);
+      setStagePos(newPos);
+    }
+
+    // Wait for the state to update and re-render before capturing
     setTimeout(() => {
       if (stageRef.current) {
         setReportImage(stageRef.current.toDataURL({ pixelRatio: 2 }));
       }
-    }, 100);
+    }, 150);
   };
 
   const clearPlot = () => {
