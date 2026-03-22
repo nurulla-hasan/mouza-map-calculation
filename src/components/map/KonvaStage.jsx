@@ -197,10 +197,10 @@ export const KonvaStage = memo(({
               x={plotPoints[0].x}
               y={plotPoints[0].y}
               radius={12 / stageScale}
-              stroke="#e11d48"
+              stroke="#2563EB"
               strokeWidth={3 / stageScale}
               dash={[6 / stageScale, 4 / stageScale]}
-              shadowColor="#e11d48"
+              shadowColor="#2563EB"
               shadowBlur={10 / stageScale}
               shadowOpacity={0.6}
             />
@@ -221,7 +221,7 @@ export const KonvaStage = memo(({
             const dy = targetY - lastPt.y;
             const distPx = Math.hypot(dx, dy);
             if (distPx < 1) return null;
-            const ft = scale ? (distPx / scale).toFixed(DECIMALS) : 0;
+            const ft = scale ? (distPx / scale).toFixed(2) : 0;
             const midX = (lastPt.x + targetX) / 2;
             const midY = (lastPt.y + targetY) / 2;
             const fontSize = 14 / stageScale;
@@ -236,7 +236,7 @@ export const KonvaStage = memo(({
             
             return (
               <Group>
-                <Line points={[lastPt.x, lastPt.y, targetX, targetY]} stroke="#eab308" strokeWidth={3 / stageScale} dash={[8 / stageScale, 6 / stageScale]} opacity={0.8} />
+                <Line points={[lastPt.x, lastPt.y, targetX, targetY]} stroke="#2563EB" strokeWidth={3 / stageScale} dash={[8 / stageScale, 6 / stageScale]} opacity={0.8} />
                 {distPx > 20 / stageScale && (
                   <KonvaLabel 
                     x={midX + perpX * offsetDist} 
@@ -245,7 +245,7 @@ export const KonvaStage = memo(({
                     offsetY={estHeight / 2} 
                     opacity={0.9}
                   >
-                    <Tag fill="#ca8a04" cornerRadius={4 / stageScale} shadowColor="black" shadowBlur={4 / stageScale} shadowOpacity={0.3} shadowOffset={{ x: 0, y: 2 / stageScale }} />
+                    <Tag fill="#2563EB" cornerRadius={4 / stageScale} shadowColor="black" shadowBlur={4 / stageScale} shadowOpacity={0.3} shadowOffset={{ x: 0, y: 2 / stageScale }} />
                     <Text text={`${ft} ft`} fontSize={fontSize} fill="white" padding={padding} fontStyle="bold" />
                   </KonvaLabel>
                 )}
@@ -263,7 +263,7 @@ export const KonvaStage = memo(({
             const dy = nextPoint.y - point.y;
             const distPx = Math.hypot(dx, dy);
             if (distPx < 15 / stageScale) return null;
-            const ft = scale ? (distPx / scale).toFixed(DECIMALS) : 0;
+            const ft = scale ? (distPx / scale).toFixed(2) : 0;
             
             const midX = (point.x + nextPoint.x) / 2;
             const midY = (point.y + nextPoint.y) / 2;
@@ -311,12 +311,12 @@ export const KonvaStage = memo(({
       {(mode === 'calibrating' || (mode === 'drawing_plot' && !isPlotFinished)) && (
         <>
           <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center">
-            <svg width="40" height="40" viewBox="0 0 40 40" style={{ filter: 'drop-shadow(0px 0px 2px rgba(255,255,255,0.8))' }}>
-              <line x1="20" y1="4" x2="20" y2="16" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="20" y1="24" x2="20" y2="36" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="4" y1="20" x2="16" y2="20" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
-              <line x1="24" y1="20" x2="36" y2="20" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
-              <circle cx="20" cy="20" r="1.5" fill="#e11d48" />
+            <svg width="24" height="24" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,0.8))' }}>
+              <line x1="12" y1="2" x2="12" y2="10" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+              <line x1="12" y1="14" x2="12" y2="22" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+              <line x1="2" y1="12" x2="10" y2="12" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+              <line x1="14" y1="12" x2="22" y2="12" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="12" r="2.5" fill="white" stroke="#2563EB" strokeWidth="1" />
             </svg>
           </div>
           <div className="pointer-events-auto absolute bottom-3 right-3 z-50">
